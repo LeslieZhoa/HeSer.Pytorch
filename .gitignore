@@ -1,0 +1,4 @@
+pretrained_model*
+*.pth
+checkpoint*
+*__pycache__*
