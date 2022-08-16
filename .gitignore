@@ -2,3 +2,5 @@ pretrained_model*
 *.pth
 checkpoint*
 *__pycache__*
+dataset
+*.png

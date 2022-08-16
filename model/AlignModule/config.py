@@ -3,6 +3,14 @@ class Params:
        
         self.name = 'Aligner'
         self.pretrain_path = None
+        self.size = 512
+
+        self.train_root = 'dataset'
+        self.val_root = 'dataset'
+        self.use_pixelwise_augs = True 
+        self.use_affine_scale = True
+        self.use_affine_shift = True
+        self.frame_num = 4
 
         self.identity_embedding_size = 512
         self.pose_embedding_size = 256

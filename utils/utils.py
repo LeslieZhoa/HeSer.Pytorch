@@ -56,8 +56,21 @@ def setup_seed(seed):
 
 def get_data_loader(args):
     if args.model == 'align':
-        train_data = AlignData(dist=args.dist)
-        test_data = AlignData(dist=args.dist)
+        train_data = AlignData(dist=args.dist,
+            size=args.size,
+            root=args.train_root,
+            frame_num=args.frame_num,
+            use_pixelwise_augs=args.use_pixelwise_augs, 
+            use_affine_scale=args.use_affine_scale,
+            use_affine_shift=args.use_affine_shift)
+        
+        test_data = AlignData(dist=args.dist,
+            size=args.size,
+            root=args.val_root,
+            frame_num=args.frame_num,
+            use_pixelwise_augs=False, 
+            use_affine_scale=False,
+            use_affine_shift=False)
     
 
     train_loader = torch.utils.data.DataLoader(
