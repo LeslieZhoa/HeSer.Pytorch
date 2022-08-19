@@ -5,12 +5,13 @@ class Params:
         self.pretrain_path = None
         self.size = 512
 
-        self.train_root = 'dataset'
-        self.val_root = 'dataset'
+        self.train_root = 'dataset/process'
+        self.val_root = 'dataset/process'
         self.use_pixelwise_augs = True 
         self.use_affine_scale = True
         self.use_affine_shift = True
-        self.frame_num = 4
+        self.frame_num = 9
+        self.skip_frame = 5
 
         self.identity_embedding_size = 512
         self.pose_embedding_size = 256
@@ -35,10 +36,10 @@ class Params:
         self.rec_loss = True 
         self.id_loss = True 
         self.per_loss = True 
-        self.lambda_gan = 1.0
+        self.lambda_gan = 0.2
         self.lambda_rec = 1.0
-        self.lambda_id = 1.0
-        self.lambda_per = 1.0
+        self.lambda_id = 0.2
+        self.lambda_per = 0.0005
 
         self.g_lr = 1e-4
         self.d_lr = 4e-4

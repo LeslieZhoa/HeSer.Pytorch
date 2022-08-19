@@ -60,17 +60,21 @@ def get_data_loader(args):
             size=args.size,
             root=args.train_root,
             frame_num=args.frame_num,
+            skip_frame=args.skip_frame,
             use_pixelwise_augs=args.use_pixelwise_augs, 
             use_affine_scale=args.use_affine_scale,
-            use_affine_shift=args.use_affine_shift)
+            use_affine_shift=args.use_affine_shift,
+            eval=False)
         
         test_data = AlignData(dist=args.dist,
             size=args.size,
             root=args.val_root,
             frame_num=args.frame_num,
+            skip_frame=args.skip_frame,
             use_pixelwise_augs=False, 
             use_affine_scale=False,
-            use_affine_shift=False)
+            use_affine_shift=False,
+            eval=True)
     
 
     train_loader = torch.utils.data.DataLoader(

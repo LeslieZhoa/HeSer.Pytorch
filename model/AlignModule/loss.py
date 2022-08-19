@@ -7,7 +7,7 @@ def compute_dis_loss(fake_pred,real_pred,D_loss):
     d_real = torch.relu(1. - real_pred).mean() 
     d_fake = torch.relu(1. + fake_pred).mean() 
     D_loss['d_real'] = d_real 
-    D_loss['d_fale'] = d_fake 
+    D_loss['d_fake'] = d_fake 
     return d_real + d_fake 
 
 def compute_gan_loss(fake_pred):
@@ -52,7 +52,7 @@ class PerceptualLoss(nn.Module):
 
         self.register_buffer('mean', mean[None, :, None, None])
         self.register_buffer('std' ,  std[None, :, None, None])
-
+        
         layers_avg_pooling = []
 
         for weights in model.parameters():
@@ -79,9 +79,7 @@ class PerceptualLoss(nn.Module):
     def forward(self, input, target):
         input = (input + 1) / 2
         target = (target.detach() + 1) / 2
-
         loss = 0
-
         features_input = self.normalize_inputs(input)
         features_target = self.normalize_inputs(target)
 
@@ -95,4 +93,4 @@ class PerceptualLoss(nn.Module):
                 else:
                     loss = loss + F.l1_loss(features_input, features_target)
 
-        return loss
+        return loss 

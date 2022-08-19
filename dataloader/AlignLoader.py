@@ -37,11 +37,13 @@ class AlignData(DatasetBase):
         # source root
         root = kwargs['root']
         self.paths = [os.path.join(root,f) for f in os.listdir(root)]
-        dis = math.floor(len(self.paths)/self.count)
-        self.paths = self.paths[self.id*dis:(self.id+1)*dis]
+        # dis = math.floor(len(self.paths)/self.count)
+        # self.paths = self.paths[self.id*dis:(self.id+1)*dis]
         self.length = len(self.paths)
         random.shuffle(self.paths)
         self.frame_num = kwargs['frame_num']
+        self.skip_frame = kwargs['skip_frame']
+        self.eval = kwargs['eval']
 
        
 
@@ -53,15 +55,29 @@ class AlignData(DatasetBase):
         vIdx = random.randint(0, len(video_paths) - 1)
         video_path = video_paths[vIdx]
         img_paths = [os.path.join(video_path,f) for f in os.listdir(video_path)]
-        iidx = sorted(random.sample(range(len(img_paths)),self.frame_num))
+        begin_idx = random.randint(0, len(img_paths) - self.frame_num*self.skip_frame - 1)
+        img_paths = [img_paths[i] 
+                    for i in range(begin_idx,begin_idx+self.frame_num*self.skip_frame,self.skip_frame)] 
 
-        t_img_path = img_paths[iidx[-1]]
+        s_img_paths = img_paths[:-1]
+
+        t_img_path = img_paths[-1]
 
         xs = []
-        for i in iidx[:-1]:
-            with Image.open(img_paths[i]) as img:
+        for img_path in s_img_paths:
+            with Image.open(img_path) as img:
                 xs.append(self.norm(self.transform(img.convert('RGB'))).unsqueeze(0))
         xs = torch.cat(xs,0)
+
+        if self.eval:
+            idx = (i + random.randint(0,self.length-1)) % self.length
+            id_path = self.paths[idx]
+            video_paths = [os.path.join(id_path,f) for f in os.listdir(id_path)]
+            vIdx = random.randint(0, len(video_paths) - 1)
+            video_path = video_paths[vIdx]
+            img_paths = [os.path.join(video_path,f) for f in os.listdir(video_path)]
+            t_img_path = img_paths[random.randint(0, len(img_paths) - 1)]
+
         with Image.open(t_img_path) as img:
             xt = self.transform(img.convert('RGB'))
         
@@ -73,6 +89,9 @@ class AlignData(DatasetBase):
 
 
     def __len__(self):
-        # return self.length
-        return 4
+        if self.eval:
+            return 1000
+        else:
+            # return self.length
+            return max(self.length,1000)
 
