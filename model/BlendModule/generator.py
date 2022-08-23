@@ -24,7 +24,7 @@ class Generator(nn.Module):
 
         self.temperature = args.temperature
 
-        self.head_index = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18]
+        self.head_index = [1,2,3,4,5,6,7,8,9,10,11,12,13,17,18]
         self.eps = 1e-8
 
     def forward(self,I_a,I_gray,I_t,M_a,M_t,cycle=False,train=False):
@@ -42,9 +42,10 @@ class Generator(nn.Module):
         M_Ah,M_Ad,M_Td,M_Ai,M_Ti,M_Ar,M_Tr = mask_list
 
         if cycle:
-            
+           
             cycle_gen = self.RCCycle(gen_h+gen_i,[M_Ar,M_Tr,M_Ai,M_Ti],matrix_list,fA.shape)
             cycle_gen = F.interpolate(cycle_gen, size=I_t.shape[-2:],mode='bilinear')
+
             I_td = I_t * M_Td
             return cycle_gen,I_td
 
@@ -173,10 +174,16 @@ class Generator(nn.Module):
         # skin
         skin_mask_A = self.get_mask(M_a,[1])
         # hair 
-        hair_mask_A = self.get_mask(M_a,[17])
+        hair_mask_A = self.get_mask(M_a,[17,18])
 
         # eye 
         eye_mask_A = self.get_mask(M_a,[4,5,6])
+
+        # brow
+        brow_mask_A = self.get_mask(M_a,[2,3])
+
+        # ear 
+        ear_mask_A = self.get_mask(M_a,[7,8,9])
 
         #nose
         nose_mask_A = self.get_mask(M_a,[10])
@@ -184,10 +191,11 @@ class Generator(nn.Module):
         # lip
         lip_mask_A = self.get_mask(M_a,[12,13])
 
+
         # tooth
         tooth_mask_A = self.get_mask(M_a,[11])
         
-        return [skin_mask_A,hair_mask_A,eye_mask_A,nose_mask_A,lip_mask_A,tooth_mask_A]
+        return [skin_mask_A,hair_mask_A,eye_mask_A,brow_mask_A,ear_mask_A,nose_mask_A,lip_mask_A,tooth_mask_A]
 
     def get_mask(self,mask,indexs):
         out = torch.zeros_like(mask)
