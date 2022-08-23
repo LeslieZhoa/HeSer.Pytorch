@@ -7,16 +7,15 @@
 import torch 
 
 from trainer.ModelTrainer import ModelTrainer
-from model.AlignModule.lib import *
+from model.BlendModule.generator import Generator
 from model.AlignModule.discriminator import Discriminator
-from itertools import chain
 from utils.utils import *
-import torch.nn.functional as F
 from model.AlignModule.loss import *
+import torch.nn.functional as F
 import random
 import torch.distributed as dist
 
-class AlignTrainer(ModelTrainer):
+class BlendTrainer(ModelTrainer):
 
     def __init__(self, args):
         super().__init__(args)
@@ -24,10 +23,6 @@ class AlignTrainer(ModelTrainer):
         if torch.cuda.is_available():
             self.device = 'cuda'
       
-        self.Epor = PorEncoder(args).to(self.device)
-        self.Eid = IDEncoder(args.id_model).to(self.device)
-        self.Epose = PoseEncoder(args).to(self.device)
-        self.Eexp = ExpEncoder(args).to(self.device)
         self.netG = Generator(args).to(self.device)
 
         self.netD = Discriminator(args).to(self.device)
@@ -40,15 +35,9 @@ class AlignTrainer(ModelTrainer):
 
         if args.dist:
             self.netG,self.netG_module = self.use_ddp(self.netG)
-            self.Eexp,self.Eexp_module = self.use_ddp(self.Eexp)
-            self.Epor,self.Epor_module = self.use_ddp(self.Epor)
-            self.Epose,self.Epose_module = self.use_ddp(self.Epose)
             self.netD,self.netD_module = self.use_ddp(self.netD)
         else:
             self.netG_module = self.netG 
-            self.Eexp_module = self.Eexp
-            self.Epor_module = self.Epor
-            self.Epose_module = self.Epose
             self.netD_module = self.netD
         
         if self.args.per_loss:
@@ -61,8 +50,7 @@ class AlignTrainer(ModelTrainer):
 
     def create_optimizer(self):
         g_optim = torch.optim.Adam(
-                    chain(self.Epor.parameters(),self.Eexp.parameters(),
-                    self.Epose.parameters(),self.netG.parameters()),
+                    self.netG.parameters(),
                     lr=self.args.g_lr,
                     betas=(self.args.beta1, self.args.beta2),
                     )
@@ -76,10 +64,7 @@ class AlignTrainer(ModelTrainer):
 
     
     def run_single_step(self, data, steps):
-        self.netG.train()
-        self.Epor.train() 
-        self.Epose.train() 
-        self.Eexp.train() 
+        self.netG.train() 
         super().run_single_step(data, steps)
         
 
@@ -87,15 +72,12 @@ class AlignTrainer(ModelTrainer):
         
         D_losses = {}
         requires_grad(self.netG, False)
-        requires_grad(self.Epor, False)
-        requires_grad(self.Epose, False)
-        requires_grad(self.Eexp, False)
         requires_grad(self.netD, True)
 
-        xs,xt,gt = data 
-        xg = self.forward(xs,xt)
-        fake_pred,fake_f = self.netD(xg)
-        real_pred,real_f = self.netD(gt)
+        I_a,I_gray,I_t,hat_t,M_a,M_t,M_hat,gt = data 
+        fake,M_Ah,M_Ai = self.netG(I_a,I_gray,I_t,M_a,M_t,train=True)
+        fake_pred,fake_f = self.netD(torch.cat([fake,M_Ah,M_Ai],1))
+        real_pred,real_f = self.netD(torch.cat([gt,M_Ah,M_Ai],1))
         d_loss = compute_dis_loss(fake_pred, real_pred,D_losses)
         D_losses['d'] = d_loss
         
@@ -110,20 +92,22 @@ class AlignTrainer(ModelTrainer):
         
         
         requires_grad(self.netG, True)
-        requires_grad(self.Epor, True)
-        requires_grad(self.Epose, True)
-        requires_grad(self.Eexp, True)
         requires_grad(self.netD, False)
         
-        xs,xt,gt = data 
-        G_losses,loss,xg = self.compute_g_loss(xs,xt,gt)
+        I_a,I_gray,I_t,hat_t,M_a,M_t,M_hat,gt = data 
+        G_losses,loss,xg = self.compute_g_loss(I_a,I_gray,I_t,M_a,M_t,gt)
+        self.optimG.zero_grad()
+        loss.mean().backward()
+        self.optimG.step()
+
+        g_losses,loss,fake_pair = self.compute_cycle_g_loss(I_a,I_gray,I_t,hat_t,M_a,M_t,M_hat)
         self.optimG.zero_grad()
         loss.mean().backward()
         self.optimG.step()
         
-        self.g_losses = G_losses
+        self.g_losses = {**G_losses,**g_losses}
         
-        self.generator = [xs[:,0].detach() if len(xs.shape)>4 else xs.detach(),xt.detach(),xg.detach(),gt.detach()]
+        self.generator = [I_a.detach(),fake_pair.detach(),xg.detach(),gt.detach()]
         
     
     def evalution(self,test_loader,steps,epoch):
@@ -135,13 +119,13 @@ class AlignTrainer(ModelTrainer):
             for i,data in enumerate(test_loader):
                 
                 data = self.process_input(data)
-                xs,xt,gt = data 
-                G_losses,losses,xg = self.compute_g_loss(xs,xt,gt)
+                I_a,I_gray,I_t,hat_t,M_a,M_t,M_hat,gt = data 
+                G_losses,losses,xg = self.compute_g_loss(I_a,I_gray,I_t,M_a,M_t,gt)
                 for k,v in G_losses.items():
                     loss_dict[k] = loss_dict.get(k,0) + v.detach()
                 if i == index and self.args.rank == 0 :
                     
-                    show_data = [xs[:,0],xt,xg,gt]
+                    show_data = [I_a,xg,gt]
                     self.val_vis.display_current_results(self.select_img(show_data),steps)
                 counter += 1
         
@@ -165,44 +149,39 @@ class AlignTrainer(ModelTrainer):
         return loss_dict
        
 
-    def forward(self,xs,xt):
-        por_f = self.Epor(xs)
-        id_f = self.Eid(self.process_id_input(xs))
-
-        pose_f = self.Epose(xt)
-        exp_f = self.Eexp(self.process_id_input(xt))
-
-        xg = self.netG(por_f,id_f,pose_f,exp_f)
-
-        return xg
-
-    def compute_g_loss(self,xs,xt,gt):
+    def compute_g_loss(self,I_a,I_gray,I_t,M_a,M_t,gt):
         G_losses = {}
         loss = 0
-        xg = self.forward(xs,xt)
-        fake_pred,fake_f = self.netD(xg)
+        fake,M_Ah,M_Ai = self.netG(I_a,I_gray,I_t,M_a,M_t,train=True)
+        fake_pred,fake_f = self.netD(torch.cat([fake,M_Ah,M_Ai],1))
         gan_loss = compute_gan_loss(fake_pred) * self.args.lambda_gan
         G_losses['g_losses'] = gan_loss
         loss += gan_loss
         
         if self.args.rec_loss:
-            rec_loss = self.L1Loss(xg,gt) * self.args.lambda_rec 
+            rec_loss = self.L1Loss(fake,gt) * self.args.lambda_rec 
             G_losses['rec_loss'] = rec_loss
             loss += rec_loss
         
-        if self.args.id_loss:
-            fake_id_f = self.Eid(self.process_id_input(xg))
-            real_id_f = self.Eid(self.process_id_input(gt))
-            id_loss = compute_id_loss(fake_id_f,real_id_f).mean() * self.args.lambda_id 
-            G_losses['id_loss'] = id_loss 
-            loss += id_loss 
 
         if self.args.per_loss:
-            per_loss = self.perLoss(xg,gt) * self.args.lambda_per 
+            per_loss = self.perLoss(fake,gt) * self.args.lambda_per 
             G_losses['per_loss'] = per_loss
             loss += per_loss 
 
-        return G_losses,loss,xg
+        return G_losses,loss,fake
+
+    
+    def compute_cycle_g_loss(self,I_a,I_gray,I_t,hat_t,M_a,M_t,M_hat):
+        G_losses = {}
+        loss = 0
+        fake_pair,label_pair = self.netG(I_a,I_gray,I_t,M_a,M_t,cycle=True)
+        fake_nopair,label_nopair = self.netG(I_a,I_gray,hat_t,M_a,M_hat,cycle=True)
+        
+        loss = self.L1Loss(fake_pair,label_pair) + \
+            self.L1Loss(fake_nopair,label_nopair)
+        G_losses['cycle'] = loss
+        return G_losses,loss,fake_pair
 
     def process_id_input(self,x):
         c,h,w = x.shape[-3:]
@@ -224,10 +203,6 @@ class AlignTrainer(ModelTrainer):
     def loadParameters(self,path):
         ckpt = torch.load(path, map_location=lambda storage, loc: storage)
         self.netG.load_state_dict(ckpt['G'],strict=False)
-        self.Eexp.load_state_dict(ckpt['Eexp'],strict=False)
-        self.Eid.load_state_dict(ckpt['Eid'],strict=False)
-        self.Epor.load_state_dict(ckpt['Epor'],strict=False)
-        self.Epose.load_state_dict(ckpt['Epose'],strict=False)
         self.netD.load_state_dict(ckpt['D'],strict=False)
         self.optimG.load_state_dict(ckpt['g_optim'])
         self.optimD.load_state_dict(ckpt['d_optim'])
@@ -236,11 +211,7 @@ class AlignTrainer(ModelTrainer):
         torch.save(
                     {
                         "G": self.netG_module.state_dict(),
-                        'D':self.netD_module.state_dict(),
-                        "Eexp": self.Eexp_module.state_dict(),
-                        "Eid":self.Eid.state_dict(),
-                        'Epor':self.Epor_module.state_dict(),
-                        'Epose':self.Epose_module.state_dict(),
+                        "D": self.netD_module.state_dict(),
                         "g_optim": self.optimG.state_dict(),
                         "d_optim": self.optimD.state_dict(),
                         "args": self.args,

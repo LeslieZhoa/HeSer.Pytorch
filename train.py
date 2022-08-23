@@ -8,9 +8,11 @@ import argparse
  
 
 from trainer.AlignTrainer import AlignTrainer
+from trainer.BlendTrainer import BlendTrainer
 import torch.distributed as dist 
 from utils.utils import setup_seed,get_data_loader,merge_args
 from model.AlignModule.config import Params as AlignParams
+from model.BlendModule.config import Params as BlendParams
 
 # torch.multiprocessing.set_start_method('spawn')
 
@@ -54,6 +56,8 @@ def train_net(args):
     args.mx_data_length = mx_length
     if args.model == 'align':
         trainer = AlignTrainer(args)
+    elif args.model == 'blend':
+        trainer = BlendTrainer(args)
    
 
     trainer.train_network(train_loader,test_loader)
@@ -65,6 +69,8 @@ if __name__ == "__main__":
     if args.model == 'align':
         params = AlignParams()
     
+    elif args.model == 'blend':
+        params = BlendParams()
     args = merge_args(args,params)
     if args.dist:
         dist.init_process_group(backend="nccl") # backbend='nccl'

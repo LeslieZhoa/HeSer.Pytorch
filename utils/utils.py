@@ -5,6 +5,7 @@
 '''
 import torch 
 from dataloader.AlignLoader import AlignData
+from dataloader.BlendLoader import BlendData
 
 
 def requires_grad(model, flag=True):
@@ -75,6 +76,15 @@ def get_data_loader(args):
             use_affine_scale=False,
             use_affine_shift=False,
             eval=True)
+
+    elif args.model == 'blend':
+        train_data = BlendData(dist=args.dist,
+            size=args.size,
+            root=args.train_root,eval=False)
+        
+        test_data = BlendData(dist=args.dist,
+            size=args.size,
+            root=args.val_root,eval=True)
     
 
     train_loader = torch.utils.data.DataLoader(
