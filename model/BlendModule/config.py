@@ -15,7 +15,7 @@ class Params:
         self.f_in_channels = 512
         self.f_inter_channels = 256
         self.temperature = 0.001
-        self.dilate_kernel = 7
+        self.dilate_kernel = 17
         self.decoder_ic = 12
 
         # discriminator

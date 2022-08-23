@@ -50,7 +50,10 @@ class Generator(nn.Module):
 
         I_tb = I_t * (1-M_Ad)
         I_ag = I_gray * M_Ah
-
+        # pdb.set_trace()
+        # cat_img = torch.cat([I_a,I_t,gen_h,gen_i,M_Ah.repeat(1,3,1,1),I_tb,M_Ai.repeat(1,3,1,1),I_ag.repeat(1,3,1,1)],-1)
+        # import cv2
+        # cv2.imwrite('1.png',(cat_img[0].permute(1,2,0).detach().cpu().numpy()[...,::-1]+1)*127.5)
         inp = torch.cat([gen_h,gen_i,
                     M_Ah,
                     I_tb,M_Ai,I_ag],1)
@@ -69,7 +72,7 @@ class Generator(nn.Module):
         M_Th = self.get_mask(M_t,self.head_index)
 
         M_Ti,M_Td = self.get_inpainting(M_Th)
-        M_Ai,M_Ad = self.get_inpainting(M_Ah+M_Th)
+        M_Ai,M_Ad = self.get_inpainting(M_Ah+M_Th,M_Ah)
         M_Ar = self.get_multi_mask(M_a)
         M_Tr = self.get_multi_mask(M_t)
 
@@ -157,10 +160,14 @@ class Generator(nn.Module):
             
         return gen,matrix_list
 
-    def get_inpainting(self,M):
+    def get_inpainting(self,M,head=None):
         M = torch.clamp(M,0,1)
         M_dilate = self.dilate(M)
-        return M_dilate - M,M_dilate
+        if head is None:
+            MI = M_dilate - M
+        else:
+            MI = M_dilate - head
+        return MI,M_dilate
     
     def get_multi_mask(self,M_a):
         # skin
