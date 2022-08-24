@@ -27,7 +27,7 @@ class Generator(nn.Module):
         self.head_index = [1,2,3,4,5,6,7,8,9,10,11,12,13,17,18]
         self.eps = 1e-8
 
-    def forward(self,I_a,I_gray,I_t,M_a,M_t,cycle=False,train=False):
+    def forward(self,I_a,I_gray,I_t,M_a,M_t,gt=None,cycle=False,train=False):
 
         fA = self.feature_ext(I_a)
         fT = self.feature_ext(I_t)
@@ -44,17 +44,18 @@ class Generator(nn.Module):
         if cycle:
            
             cycle_gen = self.RCCycle(gen_h+gen_i,[M_Ar,M_Tr,M_Ai,M_Ti],matrix_list,fA.shape)
-            cycle_gen = F.interpolate(cycle_gen, size=I_t.shape[-2:],mode='bilinear')
 
             I_td = I_t * M_Td
+            I_td = F.interpolate(I_td, size=cycle_gen.shape[-2:],mode='bilinear')
             return cycle_gen,I_td
 
-        I_tb = I_t * (1-M_Ad)
+        I_tb = gt * (1-M_Ad)
         I_ag = I_gray * M_Ah
-        # pdb.set_trace()
-        # cat_img = torch.cat([I_a,I_t,gen_h,gen_i,M_Ah.repeat(1,3,1,1),I_tb,M_Ai.repeat(1,3,1,1),I_ag.repeat(1,3,1,1)],-1)
+       
+        # cat_img = torch.cat([gen_h,gen_i,M_Ah.repeat(1,3,1,1),I_tb,M_Ai.repeat(1,3,1,1),I_ag.repeat(1,3,1,1)],-1)
         # import cv2
         # cv2.imwrite('1.png',(cat_img[0].permute(1,2,0).detach().cpu().numpy()[...,::-1]+1)*127.5)
+        # pdb.set_trace()
         inp = torch.cat([gen_h,gen_i,
                     M_Ah,
                     I_tb,M_Ai,I_ag],1)

@@ -6,7 +6,7 @@ class Params:
     def __init__(self):
        
         self.name = 'Blender'
-        self.pretrain_path = None
+        self.pretrain_path = 'checkpoint/Blender/025-00000000.pth'
         self.size = 512
 
         self.train_root = 'dataset/process/img'

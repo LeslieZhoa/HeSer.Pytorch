@@ -75,7 +75,7 @@ class BlendTrainer(ModelTrainer):
         requires_grad(self.netD, True)
 
         I_a,I_gray,I_t,hat_t,M_a,M_t,M_hat,gt = data 
-        fake,M_Ah,M_Ai = self.netG(I_a,I_gray,I_t,M_a,M_t,train=True)
+        fake,M_Ah,M_Ai = self.netG(I_a,I_gray,I_t,M_a,M_t,gt,train=True)
         fake_pred,fake_f = self.netD(torch.cat([fake,M_Ah,M_Ai],1))
         real_pred,real_f = self.netD(torch.cat([gt,M_Ah,M_Ai],1))
         d_loss = compute_dis_loss(fake_pred, real_pred,D_losses)
@@ -100,14 +100,15 @@ class BlendTrainer(ModelTrainer):
         loss.mean().backward()
         self.optimG.step()
 
-        g_losses,loss,fake_pair = self.compute_cycle_g_loss(I_a,I_gray,I_t,hat_t,M_a,M_t,M_hat)
+        g_losses,loss,fake_nopair,label_nopair = self.compute_cycle_g_loss(I_a,I_gray,I_t,hat_t,M_a,M_t,M_hat)
         self.optimG.zero_grad()
         loss.mean().backward()
         self.optimG.step()
         
         self.g_losses = {**G_losses,**g_losses}
         
-        self.generator = [I_a.detach(),fake_pair.detach(),xg.detach(),gt.detach()]
+        self.generator = [I_a.detach(),fake_nopair.detach(),
+                        label_nopair.detach(),xg.detach(),gt.detach()]
         
     
     def evalution(self,test_loader,steps,epoch):
@@ -152,7 +153,7 @@ class BlendTrainer(ModelTrainer):
     def compute_g_loss(self,I_a,I_gray,I_t,M_a,M_t,gt):
         G_losses = {}
         loss = 0
-        fake,M_Ah,M_Ai = self.netG(I_a,I_gray,I_t,M_a,M_t,train=True)
+        fake,M_Ah,M_Ai = self.netG(I_a,I_gray,I_t,M_a,M_t,gt,train=True)
         fake_pred,fake_f = self.netD(torch.cat([fake,M_Ah,M_Ai],1))
         gan_loss = compute_gan_loss(fake_pred) * self.args.lambda_gan
         G_losses['g_losses'] = gan_loss
@@ -181,7 +182,9 @@ class BlendTrainer(ModelTrainer):
         loss = self.L1Loss(fake_pair,label_pair) + \
             self.L1Loss(fake_nopair,label_nopair)
         G_losses['cycle'] = loss
-        return G_losses,loss,fake_pair
+        fake_nopair = F.interpolate(fake_nopair, size=I_t.shape[-2:],mode='bilinear')
+        label_nopair = F.interpolate(label_nopair, size=I_t.shape[-2:],mode='bilinear')
+        return G_losses,loss,fake_nopair,label_nopair
 
     def process_id_input(self,x):
         c,h,w = x.shape[-3:]

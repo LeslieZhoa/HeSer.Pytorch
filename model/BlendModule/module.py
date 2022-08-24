@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torch
 class VGG19_pytorch(nn.Module):
     """
-    NOTE: no need to pre-process the input; input tensor should range in [0,1]
+    
     """
 
     def __init__(self, pool="max"):

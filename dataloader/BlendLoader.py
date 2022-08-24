@@ -72,7 +72,7 @@ class BlendData(DatasetBase):
 
        
         I_gray = self.gray(I_a)
-        if random.random() > 0.5:
+        if random.random() > 0.3:
             I_t = F.hflip(gt)
             M_t = F.hflip(M_a)
         
