@@ -2,15 +2,15 @@ class Params:
     def __init__(self):
        
         self.name = 'Aligner'
-        self.pretrain_path = None
+        self.pretrain_path = 'checkpoint/Aligner/038-00000200.pth'
         self.size = 512
 
-        self.train_root = 'dataset/process'
-        self.val_root = 'dataset/process'
+        self.train_root = 'dataset/process/img'
+        self.val_root = 'dataset/process/img'
         self.use_pixelwise_augs = True 
         self.use_affine_scale = True
         self.use_affine_shift = True
-        self.frame_num = 9
+        self.frame_num = 5
         self.skip_frame = 5
 
         self.identity_embedding_size = 512

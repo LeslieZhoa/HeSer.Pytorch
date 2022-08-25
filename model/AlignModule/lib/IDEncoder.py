@@ -2,7 +2,6 @@ import torch
 from torch import nn
 from model.AlignModule.module import Backbone
 
-
 class IDEncoder(nn.Module):
     def __init__(self,model_path):
         super(IDEncoder, self).__init__()

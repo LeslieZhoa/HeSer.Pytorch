@@ -57,7 +57,7 @@ class AlignTrainer(ModelTrainer):
         
         if self.args.rec_loss:
             self.L1Loss = torch.nn.L1Loss()
-        
+        self.Eid.eval()
 
     def create_optimizer(self):
         g_optim = torch.optim.Adam(
@@ -166,6 +166,7 @@ class AlignTrainer(ModelTrainer):
        
 
     def forward(self,xs,xt):
+        
         por_f = self.Epor(xs)
         id_f = self.Eid(self.process_id_input(xs))
 
@@ -173,7 +174,7 @@ class AlignTrainer(ModelTrainer):
         exp_f = self.Eexp(self.process_id_input(xt))
 
         xg = self.netG(por_f,id_f,pose_f,exp_f)
-
+       
         return xg
 
     def compute_g_loss(self,xs,xt,gt):
