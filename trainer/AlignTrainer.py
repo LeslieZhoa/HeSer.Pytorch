@@ -92,8 +92,8 @@ class AlignTrainer(ModelTrainer):
         requires_grad(self.Eexp, False)
         requires_grad(self.netD, True)
 
-        xs,xt,gt = data 
-        xg = self.forward(xs,xt)
+        xs,xt,crop_xt,gt = data 
+        xg = self.forward(xs,crop_xt,xt)
         fake_pred,fake_f = self.netD(xg)
         real_pred,real_f = self.netD(gt)
         d_loss = compute_dis_loss(fake_pred, real_pred,D_losses)
@@ -115,8 +115,8 @@ class AlignTrainer(ModelTrainer):
         requires_grad(self.Eexp, True)
         requires_grad(self.netD, False)
         
-        xs,xt,gt = data 
-        G_losses,loss,xg = self.compute_g_loss(xs,xt,gt)
+        xs,xt,crop_xt,gt = data 
+        G_losses,loss,xg = self.compute_g_loss(xs,crop_xt,xt,gt)
         self.optimG.zero_grad()
         loss.mean().backward()
         self.optimG.step()
@@ -135,8 +135,8 @@ class AlignTrainer(ModelTrainer):
             for i,data in enumerate(test_loader):
                 
                 data = self.process_input(data)
-                xs,xt,gt = data 
-                G_losses,losses,xg = self.compute_g_loss(xs,xt,gt)
+                xs,xt,crop_xt,gt = data 
+                G_losses,losses,xg = self.compute_g_loss(xs,crop_xt,xt,gt)
                 for k,v in G_losses.items():
                     loss_dict[k] = loss_dict.get(k,0) + v.detach()
                 if i == index and self.args.rank == 0 :
@@ -165,22 +165,22 @@ class AlignTrainer(ModelTrainer):
         return loss_dict
        
 
-    def forward(self,xs,xt):
-        
+    def forward(self,xs,crop_xt,xt):
+       
         por_f = self.Epor(xs)
-        id_f = self.Eid(self.process_id_input(xs))
+        id_f = self.Eid(self.process_id_input(xs,crop=True))
 
         pose_f = self.Epose(xt)
-        exp_f = self.Eexp(self.process_id_input(xt))
+        exp_f = self.Eexp(self.process_id_input(crop_xt,size=256))
 
         xg = self.netG(por_f,id_f,pose_f,exp_f)
        
         return xg
 
-    def compute_g_loss(self,xs,xt,gt):
+    def compute_g_loss(self,xs,crop_xt,xt,gt):
         G_losses = {}
         loss = 0
-        xg = self.forward(xs,xt)
+        xg = self.forward(xs,crop_xt,xt)
         fake_pred,fake_f = self.netD(xg)
         gan_loss = compute_gan_loss(fake_pred) * self.args.lambda_gan
         G_losses['g_losses'] = gan_loss
@@ -192,8 +192,8 @@ class AlignTrainer(ModelTrainer):
             loss += rec_loss
         
         if self.args.id_loss:
-            fake_id_f = self.Eid(self.process_id_input(xg))
-            real_id_f = self.Eid(self.process_id_input(gt))
+            fake_id_f = self.Eid(self.process_id_input(xg,crop=True))
+            real_id_f = self.Eid(self.process_id_input(gt,crop=True))
             id_loss = compute_id_loss(fake_id_f,real_id_f).mean() * self.args.lambda_id 
             G_losses['id_loss'] = id_loss 
             loss += id_loss 
@@ -205,16 +205,20 @@ class AlignTrainer(ModelTrainer):
 
         return G_losses,loss,xg
 
-    def process_id_input(self,x):
+    @staticmethod
+    def process_id_input(x,crop=False,size=112):
         c,h,w = x.shape[-3:]
         batch = x.shape[0]
         scale = 0.4 / 1.8
-        crop_x = x[...,int(h*scale):int(-h*scale),int(w*scale):int(-w*scale)]
-        if len(x.shape) > 4:
-            resize_x = F.adaptive_avg_pool2d(crop_x.view(-1,*crop_x.shape[-3:]),112)
-            resize_x = resize_x.view(batch,-1,c,112,112)
+        if crop:
+            crop_x = x[...,int(h*scale):int(-h*scale),int(w*scale):int(-w*scale)]
         else:
-            resize_x = F.adaptive_avg_pool2d(crop_x,112)
+            crop_x = x
+        if len(x.shape) > 4:
+            resize_x = F.adaptive_avg_pool2d(crop_x.view(-1,*crop_x.shape[-3:]),size)
+            resize_x = resize_x.view(batch,-1,c,size,size)
+        else:
+            resize_x = F.adaptive_avg_pool2d(crop_x,size)
         return resize_x
     def get_latest_losses(self):
         return {**self.g_losses,**self.d_losses}
@@ -251,6 +255,11 @@ class AlignTrainer(ModelTrainer):
 
     def get_lr(self):
         return self.optimG.state_dict()['param_groups'][0]['lr']
+
+    
+    def select_img(self, data, name='fake', axis=2):
+        data = [F.adaptive_avg_pool2d(x,self.args.output_image_size) for x in data]
+        return super().select_img(data, name, axis)
     
 
 

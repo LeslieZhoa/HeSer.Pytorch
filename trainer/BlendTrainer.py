@@ -186,17 +186,7 @@ class BlendTrainer(ModelTrainer):
         label_nopair = F.interpolate(label_nopair, size=I_t.shape[-2:],mode='bilinear')
         return G_losses,loss,fake_nopair,label_nopair
 
-    def process_id_input(self,x):
-        c,h,w = x.shape[-3:]
-        batch = x.shape[0]
-        scale = 0.4 / 1.8
-        crop_x = x[...,int(h*scale):int(-h*scale),int(w*scale):int(-w*scale)]
-        if len(x.shape) > 4:
-            resize_x = F.adaptive_avg_pool2d(crop_x.view(-1,*crop_x.shape[-3:]),112)
-            resize_x = resize_x.view(batch,-1,c,112,112)
-        else:
-            resize_x = F.adaptive_avg_pool2d(crop_x,112)
-        return resize_x
+    
     def get_latest_losses(self):
         return {**self.g_losses,**self.d_losses}
 

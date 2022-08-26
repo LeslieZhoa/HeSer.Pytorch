@@ -2,7 +2,8 @@ class Params:
     def __init__(self):
        
         self.name = 'Aligner'
-        self.pretrain_path = 'checkpoint/Aligner/038-00000200.pth'
+        self.pretrain_path = 'checkpoint/Aligner/056-00000000.pth'
+        # self.pretrain_path = None
         self.size = 512
 
         self.train_root = 'dataset/process/img'

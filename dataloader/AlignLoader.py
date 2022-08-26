@@ -14,6 +14,7 @@ import random
 import math
 import torch
 from dataloader.augmentation import ParametricAugmenter
+import numpy as np
 
 
 class AlignData(DatasetBase):
@@ -34,6 +35,9 @@ class AlignData(DatasetBase):
         
         self.norm = transforms.Compose([transforms.Normalize([0.5,0.5,0.5],[0.5,0.5,0.5])])
 
+        self.resize = transforms.Compose([
+            transforms.Resize((256,256))])
+
         # source root
         root = kwargs['root']
         self.paths = [os.path.join(root,f) for f in os.listdir(root)]
@@ -44,6 +48,8 @@ class AlignData(DatasetBase):
         self.frame_num = kwargs['frame_num']
         self.skip_frame = kwargs['skip_frame']
         self.eval = kwargs['eval']
+        self.size = kwargs['size']
+        self.scale = 0.4 / 1.8
 
        
 
@@ -81,11 +87,22 @@ class AlignData(DatasetBase):
         with Image.open(t_img_path) as img:
             xt = self.transform(img.convert('RGB'))
         
-        xt,gt = self.aug_fn.augment_double(xt,xt)
+        mask = np.zeros((self.size,self.size,3),dtype=np.uint8)
+        mask[int(self.size*self.scale):int(-self.size*self.scale),
+            int(self.size*self.scale):int(-self.size*self.scale)] = 255
+        mask = mask[np.newaxis,:]
+        xt,gt,mask = self.aug_fn.augment_triple(xt,xt,mask)
+        indexs = torch.where(mask==1)
+        top = indexs[1].min()
+        bottom = indexs[1].max()
+        left = indexs[2].min()
+        right = indexs[2].max()
+        crop_xt = xt[...,top:bottom,left:right]
+        crop_xt = self.norm(crop_xt)
         xt = self.norm(xt)
         gt = self.norm(gt)
        
-        return xs,xt,gt
+        return self.resize(xs),self.resize(xt),self.resize(crop_xt),gt
 
 
     def __len__(self):

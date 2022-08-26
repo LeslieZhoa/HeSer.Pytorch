@@ -4,7 +4,7 @@ import numpy as np
 
 from contextlib import contextmanager
 
-
+# heavily copy from https://github.com/shrubb/latent-pose-reenactment
 class ParametricAugmenter:
     def is_empty(self):
         return not self.seq and not self.shift_seq
@@ -54,7 +54,7 @@ class ParametricAugmenter:
                            )
             ]
             total_augs.extend(pixelwise_augs)
-
+        affine_augs_scale = []
         if use_affine_scale:
             affine_augs_scale = [sometimes(iaa.Affine(
                 scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
@@ -62,7 +62,7 @@ class ParametricAugmenter:
                 order=[1],  # use  bilinear interpolation (fast)
                 mode=["reflect"]
             ))]
-            total_augs.extend(affine_augs_scale)
+            # total_augs.extend(affine_augs_scale)
 
         if use_affine_shift:
             affine_augs_shift = [sometimes(iaa.Affine(
@@ -75,6 +75,7 @@ class ParametricAugmenter:
 
         self.shift_seq = iaa.Sequential(affine_augs_shift)
         self.seq = iaa.Sequential(total_augs, random_order=True)
+        self.scale_seq = iaa.Sequential(affine_augs_scale)
 
     def tensor2image(self, image, norm = 255.0):
         return (np.expand_dims(image.squeeze().permute(1, 2, 0).numpy(), 0) * norm)
@@ -94,24 +95,29 @@ class ParametricAugmenter:
 
         return image
 
-    def augment_double(self, image1, image2):
+    def augment_triple(self, image1, image2,mask):
         if self.seq or self.shift_seq:
             image1 = self.tensor2image(image1).astype(np.uint8)
 
             image1 = self.seq(images=image1,)
-
+            if self.scale_seq:
+                
+                scale_seq_deterministic = self.scale_seq.to_deterministic()
+                image1 = scale_seq_deterministic(images=image1)
+                mask = scale_seq_deterministic(images=mask)
             if self.shift_seq:
                 image2 = self.tensor2image(image2).astype(np.uint8)
-
                 shift_seq_deterministic = self.shift_seq.to_deterministic()
                 image1 = shift_seq_deterministic(images=image1,)
                 image2 = shift_seq_deterministic(images=image2)
+                mask = shift_seq_deterministic(images=mask)
 
                 image2 = self.image2tensor(image2)
 
             image1 = self.image2tensor(image1)
+        mask = self.image2tensor(mask)
 
-        return image1, image2
+        return image1, image2,mask
 
     @contextmanager
     def deterministic_(self, seed):
