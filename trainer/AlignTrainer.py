@@ -171,7 +171,7 @@ class AlignTrainer(ModelTrainer):
         id_f = self.Eid(self.process_id_input(xs,crop=True))
 
         pose_f = self.Epose(xt)
-        exp_f = self.Eexp(self.process_id_input(crop_xt,size=256))
+        exp_f = self.Eexp(self.process_id_input(crop_xt,crop=True,size=256))
 
         xg = self.netG(por_f,id_f,pose_f,exp_f)
        
