@@ -32,12 +32,14 @@ class Infer:
         self.mean =torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32)
         self.std = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32)
 
-    def run(self,src_img_path,tgt_img_path):
-        src_img = cv2.imread(src_img_path)
+    def run(self,tgt_img_path,src_img_paths):
+        
         tgt_img = cv2.imread(tgt_img_path)
-
-        src_inp = self.preprocess(src_img)
         tgt_inp = self.preprocess(tgt_img)
+
+        src_img = cv2.imread(src_img_paths[0])
+           
+        src_inp = self.preprocess_multi(src_img_paths)
 
         gen = self.forward(src_inp,tgt_inp) 
         gen = self.postprocess(gen[0])
@@ -72,6 +74,15 @@ class Infer:
         x = (x[...,::-1].transpose(2,0,1)[np.newaxis,:] / 255 - 0.5) * 2
         return torch.from_numpy(x.astype(np.float32)).to(self.device)
 
+    def preprocess_multi(self,xs):
+        x_list = []
+        for x in xs:
+            x = cv2.imread(x)
+            x = cv2.resize(x,[512,512])
+            x_list.append((x[...,::-1].transpose(2,0,1)[np.newaxis,:] / 255 - 0.5) * 2)
+        x_list = np.concatenate(x_list,0)
+        return torch.from_numpy(x_list.astype(np.float32)).to(self.device).unsqueeze(0)
+
     def postprocess(self,x):
         return (x.permute(1,2,0).cpu().numpy()[...,::-1] + 1) * 127.5
 
@@ -103,12 +114,16 @@ class Infer:
             arg.eval()
 
 if __name__ == "__main__":
-    model = Infer('checkpoint/Aligner/097-00000200.pth',
+    model = Infer('checkpoint/Aligner/323-00000000.pth',
                 'checkpoint/Blender/073-00000000.pth',
                 'pretrained_models/parsing.pth')
 
-    src_path = 'dataset/process/img/id00061/2XrRfyv-EmE-0001/2121.png'
-    tgt_path = 'dataset/process/img/id00081/2xYrsnvtUWc-0000/2300.png'
-    oup = model.run(src_path,tgt_path)
+    src_path_list = ['dataset/select-align/img/id00061/2XrRfyv-EmE-0001/2122.png',
+                    'dataset/select-align/img/id00061/2XrRfyv-EmE-0001/2125.png',
+                    'dataset/select-align/img/id00061/2XrRfyv-EmE-0001/2130.png',
+                    'dataset/select-align/img/id00061/2XrRfyv-EmE-0001/2135.png',
+                    'dataset/select-align/img/id00061/2XrRfyv-EmE-0001/2140.png']
+    tgt_path = 'dataset/select-align/img/id00061/4kSyBHethpE-0002/2055.png'
+    oup = model.run(tgt_path,src_path_list)
 
-    cv2.imwrite('1.png',oup)
+    cv2.imwrite('2.png',oup)
