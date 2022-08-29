@@ -30,7 +30,7 @@ class AlignTrainer(ModelTrainer):
         self.Eexp = ExpEncoder(args).to(self.device)
         self.netG = Generator(args).to(self.device)
 
-        self.netD = Discriminator(args).to(self.device)
+        self.netD = Discriminator(in_channels=3).to(self.device)
 
 
         self.optimG,self.optimD = self.create_optimizer() 
@@ -94,8 +94,8 @@ class AlignTrainer(ModelTrainer):
 
         xs,xt,crop_xt,gt = data 
         xg = self.forward(xs,crop_xt,xt)
-        fake_pred,fake_f = self.netD(xg)
-        real_pred,real_f = self.netD(gt)
+        fake_pred  = self.netD(xg)
+        real_pred  = self.netD(gt)
         d_loss = compute_dis_loss(fake_pred, real_pred,D_losses)
         D_losses['d'] = d_loss
         
@@ -181,7 +181,7 @@ class AlignTrainer(ModelTrainer):
         G_losses = {}
         loss = 0
         xg = self.forward(xs,crop_xt,xt)
-        fake_pred,fake_f = self.netD(xg)
+        fake_pred = self.netD(xg)
         gan_loss = compute_gan_loss(fake_pred) * self.args.lambda_gan
         G_losses['g_losses'] = gan_loss
         loss += gan_loss
@@ -233,9 +233,9 @@ class AlignTrainer(ModelTrainer):
         self.Eid.load_state_dict(ckpt['Eid'],strict=False)
         self.Epor.load_state_dict(ckpt['Epor'],strict=False)
         self.Epose.load_state_dict(ckpt['Epose'],strict=False)
-        self.netD.load_state_dict(ckpt['D'],strict=False)
+        # self.netD.load_state_dict(ckpt['D'],strict=False)
         self.optimG.load_state_dict(ckpt['g_optim'])
-        self.optimD.load_state_dict(ckpt['d_optim'])
+        # self.optimD.load_state_dict(ckpt['d_optim'])
 
     def saveParameters(self,path):
         torch.save(

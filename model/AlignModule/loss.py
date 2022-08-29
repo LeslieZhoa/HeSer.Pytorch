@@ -3,15 +3,20 @@ from torch import nn
 from collections import OrderedDict
 import torchvision
 import torch.nn.functional as F
+
 def compute_dis_loss(fake_pred,real_pred,D_loss):
-    d_real = torch.relu(1. - real_pred).mean() 
-    d_fake = torch.relu(1. + fake_pred).mean() 
+    # d_real = torch.relu(1. - real_pred).mean() 
+    # d_fake = torch.relu(1. + fake_pred).mean() 
+    d_real = F.mse_loss(real_pred,torch.ones_like(real_pred))
+    d_fake = F.mse_loss(fake_pred, torch.zeros_like(fake_pred))
+
     D_loss['d_real'] = d_real 
     D_loss['d_fake'] = d_fake 
     return d_real + d_fake 
 
 def compute_gan_loss(fake_pred):
-    return -fake_pred.mean()
+
+    return F.mse_loss(fake_pred,torch.ones_like(fake_pred))
 
 def compute_id_loss(fake_id_f,real_id_f):
     return 1.0 - torch.cosine_similarity(fake_id_f,real_id_f, dim = 1)

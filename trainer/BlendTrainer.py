@@ -25,7 +25,7 @@ class BlendTrainer(ModelTrainer):
       
         self.netG = Generator(args).to(self.device)
 
-        self.netD = Discriminator(args).to(self.device)
+        self.netD = Discriminator(in_channels=args.decoder_ic).to(self.device)
 
 
         self.optimG,self.optimD = self.create_optimizer() 
@@ -76,8 +76,8 @@ class BlendTrainer(ModelTrainer):
 
         I_a,I_gray,I_t,hat_t,M_a,M_t,M_hat,gt = data 
         fake,M_Ah,M_Ai = self.netG(I_a,I_gray,I_t,M_a,M_t,gt,train=True)
-        fake_pred,fake_f = self.netD(torch.cat([fake,M_Ah,M_Ai],1))
-        real_pred,real_f = self.netD(torch.cat([gt,M_Ah,M_Ai],1))
+        fake_pred = self.netD(torch.cat([fake,M_Ah,M_Ai],1))
+        real_pred = self.netD(torch.cat([gt,M_Ah,M_Ai],1))
         d_loss = compute_dis_loss(fake_pred, real_pred,D_losses)
         D_losses['d'] = d_loss
         
@@ -154,7 +154,7 @@ class BlendTrainer(ModelTrainer):
         G_losses = {}
         loss = 0
         fake,M_Ah,M_Ai = self.netG(I_a,I_gray,I_t,M_a,M_t,gt,train=True)
-        fake_pred,fake_f = self.netD(torch.cat([fake,M_Ah,M_Ai],1))
+        fake_pred = self.netD(torch.cat([fake,M_Ah,M_Ai],1))
         gan_loss = compute_gan_loss(fake_pred) * self.args.lambda_gan
         G_losses['g_losses'] = gan_loss
         loss += gan_loss

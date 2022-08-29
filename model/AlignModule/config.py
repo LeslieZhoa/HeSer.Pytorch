@@ -2,12 +2,12 @@ class Params:
     def __init__(self):
        
         self.name = 'Aligner'
-        self.pretrain_path = 'checkpoint/Aligner/056-00000000.pth'
+        self.pretrain_path = 'checkpoint/Aligner/345-00000000.pth'
         # self.pretrain_path = None
         self.size = 512
 
-        self.train_root = 'dataset/process/img'
-        self.val_root = 'dataset/process/img'
+        self.train_root = 'dataset/select-align/img'
+        self.val_root = 'dataset/select-align/img'
         self.use_pixelwise_augs = True 
         self.use_affine_scale = True
         self.use_affine_shift = True
@@ -37,12 +37,12 @@ class Params:
         self.rec_loss = True 
         self.id_loss = True 
         self.per_loss = True 
-        self.lambda_gan = 0.2
-        self.lambda_rec = 1.0
-        self.lambda_id = 0.2
-        self.lambda_per = 0.0005
+        self.lambda_gan = 2
+        self.lambda_rec = 10
+        self.lambda_id = 2
+        self.lambda_per = 0.002
 
-        self.g_lr = 1e-4
-        self.d_lr = 4e-4
+        self.g_lr = 1e-3
+        self.d_lr = 4e-3
         self.beta1 = 0.9
         self.beta2 = 0.999
