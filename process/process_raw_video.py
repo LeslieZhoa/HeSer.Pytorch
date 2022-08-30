@@ -81,7 +81,7 @@ if __name__ == "__main__":
     m = mp.Manager()
     q1 = m.Queue()
     base = '../dataset/voceleb2'
-    save_base = '../dataset2/process'
+    save_base = '../dataset/process'
     process_num = 2
    
     info_p = Process(target=get_video_info,args=(base,save_base,q1,))

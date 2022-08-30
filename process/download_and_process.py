@@ -51,8 +51,8 @@ def read_file(base,save,q1,q2):
                 q2.put([infopath,os.path.join(save,idname,videoname,'%02d.npy'%i)])
 
 if __name__ == "__main__":
-    base = 'vox2_test_txt/txt'
-    save = 'raw'
+    base = '../dataset/vox2_test_txt/txt'
+    save = '../dataset/voceleb2'
     mp.set_start_method('spawn')
     m = mp.Manager()
     queue1 = m.Queue()

@@ -114,7 +114,7 @@ class Infer:
             arg.eval()
 
 if __name__ == "__main__":
-    model = Infer('checkpoint/Aligner/323-00000000.pth',
+    model = Infer('checkpoint/Aligner/417-00000000.pth',
                 'checkpoint/Blender/073-00000000.pth',
                 'pretrained_models/parsing.pth')
 

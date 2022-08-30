@@ -2,7 +2,7 @@ class Params:
     def __init__(self):
        
         self.name = 'Aligner'
-        self.pretrain_path = 'checkpoint/Aligner/345-00000000.pth'
+        self.pretrain_path = None
         # self.pretrain_path = None
         self.size = 512
 

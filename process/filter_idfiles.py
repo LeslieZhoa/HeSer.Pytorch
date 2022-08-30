@@ -15,5 +15,5 @@ def rm_little_files(base,th=100):
     print()
 
 if __name__ == "__main__":
-    base = '../dataset/process'
+    base = '../dataset/process/img'
     rm_little_files(base)
