@@ -1,19 +1,24 @@
-## HeSer.Pytorch
+# HeSer.Pytorch
 unofficial implementation of Few-Shot Head Swapping in the Wild<br>
 you can find official version [here](https://github.com/jmliu88/HeSer)<br>
 I did not use the discriminator from the paper and just follow [DCT-NET](https://github.com/LeslieZhoa/DCT-NET.Pytorch)
 ![](./assets/11.png)
 ![](./assets/22.png)
-### enviroment
+## enviroment
 - torch
 - opencv-python
 - tensorboardX
 - imgaug
 - face-alignment
-### How to RUN
-#### train
+```shell
+# download pretrain model
+cd process
+bash download_weight.sh
+```
+## How to RUN
+### train
 I only train one ID for driving
-##### Data Process
+#### Data Process
 1. download voxceleb2<br>
     a. I just download [voxceleb2 test dataset](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/vox2.html), you can use this [website](https://www.robots.ox.ac.uk/~vgg/data/voxceleb/data/vox2_test_txt.zip)<br>
     b. You can unzip this file like this: 
@@ -111,7 +116,7 @@ I only train one ID for driving
     |   |   |-- 1279.png
     |   |   |-- 1280.png
     ```
-##### Train Align
+#### Train Align
 I just use id00061 to train align<br>
 check [model/AlignModule/config.py](model/AlignModule/config.py#L1) to put your own path and params<br>
 for single gpu
@@ -122,7 +127,7 @@ for multi gpu
 ```
 python -m torch.distributed.launch train.py --model align --batch_size 8 --checkpoint_path checkpoint --lr 2e-4 --print_interval 100 --save_interval 100
 ```
-##### Train Blend
+#### Train Blend
 check [model/BlendModule/config.py](model/BlendModule/config.py#L1) to put your own path and params<br>
 for single gpu
 ```
@@ -132,12 +137,12 @@ for multi gpu
 ```
 python -m torch.distributed.launch train.py --model blend --batch_size 8 --checkpoint_path checkpoint --lr 2e-4 --print_interval 100 --save_interval 100
 ```
-### Inference
+## Inference
 follow inference.py, change your own model path and input images<br>
 ```shell
 python inference.py
 ```
-### Show
+## Show
 The result is just overfitting
 ![](assets/show.png)
 
