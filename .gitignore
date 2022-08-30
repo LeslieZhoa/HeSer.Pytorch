@@ -3,4 +3,3 @@ pretrained_model*
 checkpoint*
 *__pycache__*
 dataset
-*.png
