@@ -25,7 +25,7 @@ class BlendTrainer(ModelTrainer):
       
         self.netG = Generator(args).to(self.device)
 
-        self.netD = Discriminator(in_channels=args.decoder_ic).to(self.device)
+        self.netD = Discriminator(in_channels=5).to(self.device)
 
 
         self.optimG,self.optimD = self.create_optimizer() 
