@@ -4,6 +4,8 @@ you can find official version [here](https://github.com/jmliu88/HeSer)<br>
 I did not use the discriminator from the paper and just follow [DCT-NET](https://github.com/LeslieZhoa/DCT-NET.Pytorch)
 ![](./assets/11.png)
 ![](./assets/22.png)
+## !!!!NEWS!!!!!
+[HeadSwap](https://github.com/LeslieZhoa/HeadSwap) is Back. You can use it in colab. Try Now!!!
 ## enviroment
 - torch
 - opencv-python
